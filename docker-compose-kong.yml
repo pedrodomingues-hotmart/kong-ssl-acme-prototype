@@ -1,0 +1,57 @@
+version: '3.9'
+services:
+  static-page-server.local:
+    image: nginx
+    container_name: static-page-server
+    volumes:
+      - ./proxy-server/conf.d:/etc/nginx/conf.d
+      - ./proxy-app:/usr/share/nginx/html
+    ports:
+      - "8180:80"
+      - "8433:433"
+
+  kong-database.local:
+    container_name: kong-database
+    image: 'postgres:12.2'
+    environment:
+      - POSTGRES_USER=kong
+      - POSTGRES_DB=kong
+      - POSTGRES_PASSWORD=kong
+    volumes:
+      - ${KART_ROOT}/data/kong:/var/lib/postgresql/data
+
+  kong-migrations.local:
+    container_name: kong-migrations
+    image: kong:latest
+    command: kong migrations bootstrap
+    depends_on:
+      - kong-database.local
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_HOST: kong-database.local
+    restart: on-failure
+
+  kong.local:
+    container_name: kong
+    image: kong:latest
+    depends_on:
+      - kong-database.local
+    environment:
+      - KONG_DATABASE=postgres
+      - KONG_PG_HOST=kong-database.local
+      - KONG_PG_DATABASE=kong
+      - KONG_PG_PASSWORD=kong
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_ADMIN_LISTEN_SSL=0.0.0.0:8444
+      - KONG_LUA_SSL_TRUSTED_CERTIFICATE=/etc/ssl/certs/ca-certificates.crt
+    volumes:
+      - ../notfound-transformer:/notfound-transformer
+    ports:
+      - "80:8000"
+      - "8001:8001"
+      - "443:8443"
+      - "8444:8444"
+    restart: on-failure:5
