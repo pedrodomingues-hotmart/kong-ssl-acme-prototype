@@ -49,6 +49,7 @@ services:
       - KONG_LUA_SSL_TRUSTED_CERTIFICATE=/etc/ssl/certs/ca-certificates.crt
     volumes:
       - ../notfound-transformer:/notfound-transformer
+      - ./acme:/usr/local/share/lua/5.1/kong/plugins/acme
     ports:
       - "80:8000"
       - "8001:8001"
